@@ -1,5 +1,6 @@
-function bdctimg=hopfieldnet(spimg,targetimg)
+function Cb=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
+%expected output bdctimg
 
 %Initialization
 A=500;
@@ -17,3 +18,8 @@ bdcttarget=blkproc(targetimg,[8 8],@dct2);
 bdcttarget=abs(round(bdcttarget));
 tpm=tpm1(bdctimg,T,2);
 tpmtarget=tpm1(bdcttarget,T,2);
+
+%calculate Cb
+Cb=tpmtarget-tpm;
+Cb=Cb(:);
+

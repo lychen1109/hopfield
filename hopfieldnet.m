@@ -16,8 +16,8 @@ bdctsign=sign(bdctimg);
 bdctimg=abs(round(bdctimg));
 bdcttarget=blkproc(targetimg,[8 8],@dct2);
 bdcttarget=abs(round(bdcttarget));
-tpm=tpm1(bdctimg,T,2);
-tpmtarget=tpm1(bdcttarget,T,2);
+tpm=tpm1(bdctimg,T,1);
+tpmtarget=tpm1(bdcttarget,T,1);
 
 %calculate Cb
 Cb=tpmtarget-tpm;

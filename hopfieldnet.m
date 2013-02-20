@@ -1,4 +1,4 @@
-function U=hopfieldnet(spimg,targetimg)
+function V=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 1) filter out those illegal Vxi; 
@@ -15,7 +15,7 @@ C=500;
 u0=0.02;
 T=4;%Threshold of markov algorithm
 M=1;%maximum modification of coeff
-L=5;%Process L lines a time
+L=1;%Process L lines a time
 
 %calculate tpm of spimg and targetimg
 spimg=reshape(spimg,128,128);
@@ -63,9 +63,12 @@ end
 
 Tmat=Tmat+triu(Tmat,1)';
 
-%Calculate u00 and U
+%Calculate u00,U and V
 u00=u0*artanh(2/(2*M+1)-1);
 U=ones(2*M+1,25*L)*u00;
+V=nodeg(U,u0);
+
+
 
 
 

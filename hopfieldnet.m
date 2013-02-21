@@ -77,7 +77,9 @@ u00=u0*artanh(2/(2*M+1)-1);
 U=ones(2*M+1,25*L)*u00;
 V=nodeg(U,u0);
 E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-fprintf('E0=%d\n',E);
+fprintf('E0=%g\n',E);
+[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W);
+fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
 
 %sequential update of nodes
 for loop=1:20
@@ -87,15 +89,44 @@ for loop=1:20
             U(x,i)=Tmat(m,:)*V(:)+I(m);
             V(x,i)=nodeg(U(x,i),u0);
         end
-    end    
+    end
     Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-    fprintf('Enew=%d\n',Enew);
+    fprintf('Enew=%g\n',Enew);
+    [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W);
+    fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
     if Enew>=E
         break
     else
         E=Enew;
     end
 end
+
+%objective function
+function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W)
+[sx,si]=size(V);
+f1=0;
+for i=1:si
+    for x=1:sx-1
+        for y=x+1:sx
+            f1=f1+V(x,i)*V(y,i);
+        end
+    end
+end
+f1=f1*A;%No need to be divided by 2
+
+f2=B/2*(sum(V(:))-N)^2;
+
+f3=repmat(V,[1 1 size(W,3)]).*W;
+f3=sum(f3,1);
+f3=sum(f3,2);
+f3=sum((Cb-squeeze(f3)).^2);
+f3=C/2*f3;
+fall=f1+f2+f3;
+
+
+
+
+    
 
 
 

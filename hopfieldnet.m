@@ -1,4 +1,4 @@
-function V=hopfieldnet(spimg,targetimg)
+function [Tmat,I]=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 1) filter out those illegal Vxi; 
@@ -9,14 +9,14 @@ function V=hopfieldnet(spimg,targetimg)
 %       6) test single precision storage for Tmat
 
 %Initialization
-A=500;
-B=200;
-C=500;
-u0=0.02;
+A=1500;
+B=400;
+C=2;
+u0=300;
 T=4;%Threshold of markov algorithm
 M=1;%maximum modification of coeff
 L=1;%Process L lines a time
-N=25*L+4;
+N=25*L+5;
 
 %calculate tpm of spimg and targetimg
 spimg=reshape(spimg,128,128);
@@ -74,7 +74,7 @@ end
 
 %Calculate u00, U, V, and E
 u00=u0*artanh(2/(2*M+1)-1);
-U=ones(2*M+1,25*L)*u00;
+U=ones(2*M+1,25*L)*u00+(rand(2*M+1,25*L)*0.2-0.1)*u0;
 V=nodeg(U,u0);
 E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
 fprintf('E0=%g\n',E);
@@ -94,7 +94,7 @@ for loop=1:20
     fprintf('Enew=%g\n',Enew);
     [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W);
     fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
-    if Enew>=E
+    if 0 %Enew>=E
         break
     else
         E=Enew;

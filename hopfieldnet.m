@@ -14,11 +14,12 @@ B=400;
 C=2;
 u0=300;
 T=4;%Threshold of markov algorithm
-M=1;%maximum modification of coeff
-L=1;%Process L lines a time
+M=3;%maximum modification of coeff
+L=3;%Process L lines a time
 N=25*L+5;
 stack=[];%used in calculation of average delta Energy function
 tol=5e-4;%tolerance of minimum delta Energy function
+fprintf('size of network %d nodes\n',(2*M+1)*25*L);
 
 %calculate tpm of spimg and targetimg
 spimg=reshape(spimg,128,128);
@@ -84,7 +85,9 @@ fprintf('E0=%g\n',E);
 fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n\n',fall,f1,f2,f3);
 
 %sequential update of nodes
+iter=0;
 while 1
+    iter=iter+1;
     for x=1:2*M+1
         for i=1:25*L
             m=sub2ind([2*M+1 25*L],x,i);
@@ -93,12 +96,12 @@ while 1
         end
     end
     Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-    fprintf('Enew=%g\n',Enew);
+    fprintf('iter:%d  Enew=%g\n',iter,Enew);
     [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W);
     fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
     stack=stafun((Enew-E)/abs(E),stack);
-    fprintf('length of stack %d\n',length(stack));
-    fprintf('mean of stack %g\n\n',mean(stack));
+    %fprintf('length of stack %d\n',length(stack));
+    %fprintf('mean of stack %g\n\n',mean(stack));
     if abs(mean(stack))<tol
         break
     end

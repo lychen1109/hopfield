@@ -1,9 +1,9 @@
-function [Tmat,I]=hopfieldnet(spimg,targetimg)
+function [V,U,I,result]=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 1) filter out those illegal Vxi; 
 %       2) add input params which can shift colm;
-%       3) test if T can be more than 4
+%       3) test if T should be more than 4
 %       4) add input for M according to memory of machine
 %       5) compare different choices of A, B, C
 %       6) test single precision storage for Tmat
@@ -38,16 +38,18 @@ Cb=Cb(:);
 
 %initialize W
 W=zeros(2*M+1,25*L,(2*T+1)^2);
+vmask=true(2*M+1,25*L);
 for row=1:L
     for col=1:25
         for f=1:2*M+1
             flag=f-M-1;
             if bdctimg(row,(col-1)*5+3)+flag<0
+                vmask(f,(row-1)*25+col)=false;
                 continue;
             else
                 D=tpmdiff(bdctimg,row,(col-1)*5+3,flag);
+                W(f,(row-1)*25+col,:)=reshape(D,1,1,(2*T+1)^2);
             end
-            W(f,(row-1)*25+col,:)=reshape(D,1,1,(2*T+1)^2);
         end
     end
 end
@@ -108,6 +110,11 @@ while 1
     E=Enew;
 end
 
+%validatin of V
+V=(V>0.5);
+result=networkvalidation(V,W);
+
+
 %objective function
 function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W)
 [sx,si]=size(V);
@@ -139,6 +146,28 @@ else
     stack(1:2)=stack(2:3);
     stack(3)=newvalue;
 end
+
+%ileagle output evaluation
+function result=networkvalidation(V,W)
+[xmax,imax]=size(V);
+result=isequal(ones(1,imax),sum(V));
+if result==0
+    fprintf('not permutation matrix\n');
+    return
+end
+
+idx=find(V);
+for l=1:length(idx)
+    [x,i]=ind2sub(size(V),idx(l));
+    if x~=(xmax+1)/2 && isequal(squeeze(W(x,i,:)),zeros(size(W,3),1))
+        result=0;
+        fprintf('illeagle pixel in %d,%d\n',x,i);
+        return
+    end
+end
+
+
+    
 
 
 

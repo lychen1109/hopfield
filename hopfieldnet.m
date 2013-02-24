@@ -1,12 +1,8 @@
-function [Vout,result]=hopfieldnet(spimg,targetimg)
+function [Vout]=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 
 %       2) add input params which can shift colm;
-%       3) test if T should be more than 4
-%       4) add input for M according to memory of machine
-%       5) compare different choices of A, B, C
-%       6) test single precision storage for Tmat
 
 %Initialization
 A=1500;
@@ -109,31 +105,31 @@ end
 Vout=false(2*M+1,25*L);
 V=(V>0.5);
 Vout(idxnode)=V;
-result=networkvalidation(Vout);
+% result=networkvalidation(Vout);
 
 
 %objective function
-function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode)
-f1=0;
-lengthnode=length(idxnode);
-for m=1:lengthnode
-    for n=1:lengthnode
-        [x,i]=ind2sub([2*M+1 25*L],idxnode(m));
-        [y,j]=ind2sub([2*M+1 25*L],idxnode(n));
-        if i==j && x~=y
-            f1=f1+V(m)*V(n);
-        end
-    end
-end
-f1=f1*A/2;
-
-f2=B/2*(sum(V(:))-N)^2;
-
-f3=repmat(V,[1 size(W,2)]).*W;
-f3=sum(f3);
-f3=sum((Cb-f3').^2);
-f3=C/2*f3;
-fall=f1+f2+f3;
+% function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode)
+% f1=0;
+% lengthnode=length(idxnode);
+% for m=1:lengthnode
+%     for n=1:lengthnode
+%         [x,i]=ind2sub([2*M+1 25*L],idxnode(m));
+%         [y,j]=ind2sub([2*M+1 25*L],idxnode(n));
+%         if i==j && x~=y
+%             f1=f1+V(m)*V(n);
+%         end
+%     end
+% end
+% f1=f1*A/2;
+% 
+% f2=B/2*(sum(V(:))-N)^2;
+% 
+% f3=repmat(V,[1 size(W,2)]).*W;
+% f3=sum(f3);
+% f3=sum((Cb-f3').^2);
+% f3=C/2*f3;
+% fall=f1+f2+f3;
 
 %stack function: add newvalue into stack
 function stack=stafun(newvalue,stack)
@@ -146,12 +142,12 @@ else
 end
 
 %ileagle output evaluation
-function result=networkvalidation(Vout)
-result=isequal(ones(1,size(Vout,2)),sum(Vout));
-if result==0
-    fprintf('not permutation matrix\n');
-    return
-end
+% function result=networkvalidation(Vout)
+% result=isequal(ones(1,size(Vout,2)),sum(Vout));
+% if result==0
+%     fprintf('not permutation matrix\n');
+%     return
+% end
 
 
 

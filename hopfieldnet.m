@@ -1,4 +1,4 @@
-function [Vout]=hopfieldnet(bdctimg,tpmtarget,T)
+function [Vout]=hopfieldnet(spimg,targetimg,T)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 
@@ -15,7 +15,16 @@ N=25*L+5;
 stack=[];%used in calculation of average delta Energy function
 tol=5e-4;%tolerance of minimum delta Energy function
 
-%calculate current tpm of spimg
+%calculate bdct and tpm of spimg and targetimg
+spimg=reshape(spimg,128,128);
+targetimg=reshape(targetimg,128,128);
+bdctimg=blkproc(spimg,[8 8],@dct2);
+bdctimg=round(bdctimg);
+bdctsign=sign(bdctimg);
+bdctimg=abs(bdctimg);
+bdcttarget=blkproc(targetimg,[8 8],@dct2);
+bdcttarget=abs(round(bdcttarget));
+tpmtarget=tpm1(bdcttarget,T,1);
 tpm=tpm1(bdctimg,T,1);
 
 %calculate Cb

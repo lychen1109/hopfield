@@ -1,7 +1,7 @@
 function [Vout,result]=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
-%todos: 1) filter out those illegal Vxi; 
+%todos: 
 %       2) add input params which can shift colm;
 %       3) test if T should be more than 4
 %       4) add input for M according to memory of machine
@@ -13,7 +13,7 @@ A=1500;
 B=400;
 C=2;
 u0=300;
-T=4;%Threshold of markov algorithm
+T=10;%Threshold of markov algorithm
 M=3;%maximum modification of coeff
 L=3;%Process L lines a time
 N=25*L+5;
@@ -46,7 +46,7 @@ for row=1:L
                 vmask(f,(row-1)*25+col)=false;
                 continue;
             else
-                D=tpmdiff(bdctimg,row,(col-1)*5+3,flag);
+                D=tpmdiff(bdctimg,row,(col-1)*5+3,flag,T);
                 W(f,(row-1)*25+col,:)=reshape(D,1,1,(2*T+1)^2);
             end
         end

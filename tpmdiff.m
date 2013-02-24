@@ -1,7 +1,6 @@
-function tpm=tpmdiff(array,row,col,flag)
+function tpm=tpmdiff(array,row,col,flag,T)
 %calculate tpm difference while modify single BDCT coeff
 
-T=4;
 M=size(array,2);
 tpm=zeros(2*T+1,2*T+1);
 if col>2

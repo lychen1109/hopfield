@@ -1,4 +1,4 @@
-function [V,U,I,result]=hopfieldnet(spimg,targetimg)
+function [Vout,result]=hopfieldnet(spimg,targetimg)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 1) filter out those illegal Vxi; 
@@ -19,7 +19,6 @@ L=3;%Process L lines a time
 N=25*L+5;
 stack=[];%used in calculation of average delta Energy function
 tol=5e-4;%tolerance of minimum delta Energy function
-fprintf('size of network %d nodes\n',(2*M+1)*25*L);
 
 %calculate tpm of spimg and targetimg
 spimg=reshape(spimg,128,128);
@@ -53,54 +52,50 @@ for row=1:L
         end
     end
 end
-
+idxnode=find(vmask);
+lengthnode=length(idxnode);
+fprintf('size of network %d nodes\n',lengthnode);
+W=reshape(W,(2*M+1)*25*L,(2*T+1)^2);
+W=W(vmask(:),:);
 %initalization of Tmat
-Tmat=zeros((2*M+1)*25*L,(2*M+1)*25*L);
+Tmat=zeros(lengthnode,lengthnode);
 
 %Since this matrix is symmetrical, we only need to calculate half of the
 %elements
-for m=1:(2*M+1)*25*L
-    for n=m:(2*M+1)*25*L
-        [x,i]=ind2sub([(2*M+1) (25*L)],m);
-        [y,j]=ind2sub([(2*M+1) (25*L)],n);
-        Tmat(m,n)=-A*delta(i,j)*(1-delta(x,y))-B-C*dot(W(x,i,:),W(y,j,:),3);
+for m=1:lengthnode
+    for n=m:lengthnode
+        [x,i]=ind2sub([(2*M+1) (25*L)],idxnode(m));
+        [y,j]=ind2sub([(2*M+1) (25*L)],idxnode(n));
+        Tmat(m,n)=-A*delta(i,j)*(1-delta(x,y))-B-C*W(m,:)*W(n,:)';
     end
 end
 
 Tmat=Tmat+triu(Tmat,1)';
 
 %calculate I
-I=ones(2*M+1,25*L)*N*B;
-for x=1:2*M+1
-    for i=1:25*L
-        I(x,i)=I(x,i)+C*(Cb'*squeeze(W(x,i,:)));
-    end
-end
+I=N*B+C*W*Cb;
 
 %Calculate u00, U, V, and E
-u00=u0*artanh(2/(2*M+1)-1);
-U=ones(2*M+1,25*L)*u00+(rand(2*M+1,25*L)*0.2-0.1)*u0;
+u00=u0*artanh(2*25*L/lengthnode-1);
+U=ones(lengthnode,1)*u00+(rand(lengthnode,1)*0.2-0.1)*u0;
 V=nodeg(U,u0);
 E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
 fprintf('E0=%g\n',E);
-[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W);
-fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n\n',fall,f1,f2,f3);
+% [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode);
+% fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n\n',fall,f1,f2,f3);
 
 %sequential update of nodes
 iter=0;
 while 1
     iter=iter+1;
-    for x=1:2*M+1
-        for i=1:25*L
-            m=sub2ind([2*M+1 25*L],x,i);
-            U(x,i)=Tmat(m,:)*V(:)+I(m);
-            V(x,i)=nodeg(U(x,i),u0);
-        end
+    for m=1:lengthnode
+        U(m)=Tmat(m,:)*V(:)+I(m);
+        V(m)=nodeg(U(m),u0);
     end
     Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
     fprintf('iter:%d  Enew=%g\n',iter,Enew);
-    [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W);
-    fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+%     [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode);
+%     fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
     stack=stafun((Enew-E)/abs(E),stack);
     %fprintf('length of stack %d\n',length(stack));
     %fprintf('mean of stack %g\n\n',mean(stack));
@@ -111,29 +106,32 @@ while 1
 end
 
 %validatin of V
+Vout=false(2*M+1,25*L);
 V=(V>0.5);
-result=networkvalidation(V,W);
+Vout(idxnode)=V;
+result=networkvalidation(Vout);
 
 
 %objective function
-function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W)
-[sx,si]=size(V);
+function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode)
 f1=0;
-for i=1:si
-    for x=1:sx-1
-        for y=x+1:sx
-            f1=f1+V(x,i)*V(y,i);
+lengthnode=length(idxnode);
+for m=1:lengthnode
+    for n=1:lengthnode
+        [x,i]=ind2sub([2*M+1 25*L],idxnode(m));
+        [y,j]=ind2sub([2*M+1 25*L],idxnode(n));
+        if i==j && x~=y
+            f1=f1+V(m)*V(n);
         end
     end
 end
-f1=f1*A;%No need to be divided by 2
+f1=f1*A/2;
 
 f2=B/2*(sum(V(:))-N)^2;
 
-f3=repmat(V,[1 1 size(W,3)]).*W;
-f3=sum(f3,1);
-f3=sum(f3,2);
-f3=sum((Cb-squeeze(f3)).^2);
+f3=repmat(V,[1 size(W,2)]).*W;
+f3=sum(f3);
+f3=sum((Cb-f3').^2);
 f3=C/2*f3;
 fall=f1+f2+f3;
 
@@ -148,23 +146,14 @@ else
 end
 
 %ileagle output evaluation
-function result=networkvalidation(V,W)
-[xmax,imax]=size(V);
-result=isequal(ones(1,imax),sum(V));
+function result=networkvalidation(Vout)
+result=isequal(ones(1,size(Vout,2)),sum(Vout));
 if result==0
     fprintf('not permutation matrix\n');
     return
 end
 
-idx=find(V);
-for l=1:length(idx)
-    [x,i]=ind2sub(size(V),idx(l));
-    if x~=(xmax+1)/2 && isequal(squeeze(W(x,i,:)),zeros(size(W,3),1))
-        result=0;
-        fprintf('illeagle pixel in %d,%d\n',x,i);
-        return
-    end
-end
+
 
 
     

@@ -1,4 +1,4 @@
-function [Vout]=hopfieldnet(spimg,targetimg)
+function [Vout]=hopfieldnet(bdctimg,tpmtarget,T)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %expected output bdctimg
 %todos: 
@@ -9,23 +9,14 @@ A=1500;
 B=400;
 C=2;
 u0=300;
-T=10;%Threshold of markov algorithm
 M=3;%maximum modification of coeff
 L=3;%Process L lines a time
 N=25*L+5;
 stack=[];%used in calculation of average delta Energy function
 tol=5e-4;%tolerance of minimum delta Energy function
 
-%calculate tpm of spimg and targetimg
-spimg=reshape(spimg,128,128);
-targetimg=reshape(targetimg,128,128);
-bdctimg=blkproc(spimg,[8 8],@dct2);
-bdctsign=sign(bdctimg);
-bdctimg=abs(round(bdctimg));
-bdcttarget=blkproc(targetimg,[8 8],@dct2);
-bdcttarget=abs(round(bdcttarget));
+%calculate current tpm of spimg
 tpm=tpm1(bdctimg,T,1);
-tpmtarget=tpm1(bdcttarget,T,1);
 
 %calculate Cb
 Cb=tpmtarget-tpm;

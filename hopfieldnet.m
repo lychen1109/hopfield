@@ -1,8 +1,8 @@
 function bdctimg=hopfieldnet(spimg,targetimg,T)
 %Hopfieldnet: calculate the best BDCT with hopfield network
-%expected output bdctimg
-%todos: 
-%       2) add input params which can shift colm;
+%intput images are square and multiple of 8
+%todo: 1. change program so that it can process image wth different size
+%      2. record feature distance of every iteration
 
 %Initialization
 A=1500;
@@ -16,47 +16,48 @@ stack=[];%used in calculation of average delta Energy function
 tol=5e-4;%tolerance of minimum delta Energy function
 
 %calculate bdct and tpm of spimg and targetimg
-spimg=reshape(spimg,128,128);
-targetimg=reshape(targetimg,128,128);
 bdctimg=blkproc(spimg,[8 8],@dct2);
 bdctimg=round(bdctimg);
 bdctsign=sign(bdctimg);
 bdctimg=abs(bdctimg);
+Vglobal=zeros(size(bdctimg));
+
 bdcttarget=blkproc(targetimg,[8 8],@dct2);
 bdcttarget=abs(round(bdcttarget));
 tpmtarget=tpm1(bdcttarget,T,1);
-Vglobal=zeros(size(bdctimg));
 
-%blockmark
-blockmark={1:5:126;2:5:127;3:5:128;4:5:124;5:5:125};
+[MI,NI]=size(bdctimg);
+RV=MI/L;
+RH=5;%horizontal repitition if fixed
 
-for blockrow=1:32
-    for blockcol=1:5
+for blockrow=1:RV
+    for blockcol=1:RH
         %calculate Cb
         tpm=tpm1(bdctimg+Vglobal,T,1);
         Cb=tpmtarget-tpm;
         Cb=Cb(:);
         
-        %read block index
-        blockidx=blockmark{blockcol};
-        bwidth=length(blockidx);
-        
         %initialize W
+        if mod(NI,5)>=blockcol
+            bwidth=floor(NI/5)+1;
+        else
+            bwidth=floor(NI/5);
+        end
         W=zeros(2*M+1,bwidth*L,(2*T+1)^2);
         vmask=true(2*M+1,bwidth*L);
         for row=1:L
             for col=1:bwidth
-                if mod((blockrow-1)*L+row,8)==1 && mod(blockidx(col),8)==1
+                if mod((blockrow-1)*L+row,8)==1 && mod((col-1)*5+blockcol,8)==1
                     vmask(:,(row-1)*bwidth+col)=false;
                     continue;
                 end
                 for f=1:2*M+1
                     flag=f-M-1;
-                    if bdctimg((blockrow-1)*L+row,blockidx(col))+flag<0
+                    if bdctimg((blockrow-1)*L+row,(col-1)*5+blockcol)+flag<0
                         vmask(f,(row-1)*bwidth+col)=false;
                         continue;
                     else
-                        D=tpmdiff(bdctimg,(blockrow-1)*L+row,blockidx(col),flag,T);
+                        D=tpmdiff(bdctimg+Vglobal,(blockrow-1)*L+row,(col-1)*5+blockcol,flag,T);
                         W(f,(row-1)*bwidth+col,:)=reshape(D,1,1,(2*T+1)^2);
                     end
                 end
@@ -116,13 +117,13 @@ for blockrow=1:32
             E=Enew;
         end
         
-        %validatin of V
+        %validation of V
         Vout=false(2*M+1,bwidth*L);
         Sout=repmat((-M:M)',1,bwidth*L);
         V=(V>0.5);
         Vout(idxnode)=V;
         Vout=sum(Vout.*Sout);
-        Vglobal((blockrow-1)*L+1:(blockrow-1)*L+L,blockidx)=reshape(Vout,bwidth,L)';
+        Vglobal((blockrow-1)*L+1:(blockrow-1)*L+L,blockcol:5:(bwidth-1)*5+blockcol)=reshape(Vout,bwidth,L)';
         % result=networkvalidation(Vout);
     end
 end

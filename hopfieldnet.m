@@ -7,7 +7,7 @@ function bdctimg=hopfieldnet(spimg,targetimg,T)
 %Initialization
 A=1500;
 B=400;
-C=2;
+C=20;
 u0=300;
 M=3;%maximum modification of coeff
 L=4;%Process L lines a time
@@ -19,6 +19,7 @@ tol=5e-4;%tolerance of minimum delta Energy function
 bdctimg=blkproc(spimg,[8 8],@dct2);
 bdctimg=round(bdctimg);
 bdctsign=sign(bdctimg);
+bdctsign(bdctsign==0)=1;
 bdctimg=abs(bdctimg);
 Vglobal=zeros(size(bdctimg));
 
@@ -30,19 +31,25 @@ tpmtarget=tpm1(bdcttarget,T,1);
 RV=MI/L;
 RH=5;%horizontal repitition if fixed
 
+[~,dist2]=distcal1(spimg,targetimg,(bdctimg+Vglobal).*bdctsign,T);
+fprintf('original distance %g\n\n',dist2);
+
 for blockrow=1:RV
     for blockcol=1:RH
-        %calculate Cb
-        tpm=tpm1(bdctimg+Vglobal,T,1);
-        Cb=tpmtarget-tpm;
-        Cb=Cb(:);
-        
-        %initialize W
+        %decide related coefficients
         if mod(NI,5)>=blockcol
             bwidth=floor(NI/5)+1;
         else
             bwidth=floor(NI/5);
-        end
+        end        
+        
+        %calculate Cb
+        tpm=tpm1(bdctimg+Vglobal,T,1);
+        Cb=tpmtarget-tpm;
+        Cb=Cb(:);
+        fprintf('current Cb %g\n',norm(Cb));
+        
+        %initialize W        
         W=zeros(2*M+1,bwidth*L,(2*T+1)^2);
         vmask=true(2*M+1,bwidth*L);
         for row=1:L
@@ -84,7 +91,7 @@ for blockrow=1:RV
         Tmat=Tmat+triu(Tmat,1)';
         
         %calculate I
-        N=bwidth*L+5;
+        N=bwidth*L;
         I=N*B+C*W*Cb;
         
         %Calculate u00, U, V, and E
@@ -92,9 +99,9 @@ for blockrow=1:RV
         U=ones(lengthnode,1)*u00+(rand(lengthnode,1)*0.2-0.1)*u0;
         V=nodeg(U,u0);
         E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-        fprintf('E0=%g\n',E);
-        % [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode);
-        % fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n\n',fall,f1,f2,f3);
+        fprintf('iter:0 E0=%g\n',E);
+        [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
+        fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
         
         %sequential update of nodes
         iter=0;
@@ -106,8 +113,8 @@ for blockrow=1:RV
             end
             Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
             fprintf('iter:%d  Enew=%g\n',iter,Enew);
-            %     [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode);
-            %     fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+            [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
+            fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
             stack=stafun((Enew-E)/abs(E),stack);
             %fprintf('length of stack %d\n',length(stack));
             %fprintf('mean of stack %g\n\n',mean(stack));
@@ -123,34 +130,43 @@ for blockrow=1:RV
         V=(V>0.5);
         Vout(idxnode)=V;
         Vout=sum(Vout.*Sout);
-        Vglobal((blockrow-1)*L+1:(blockrow-1)*L+L,blockcol:5:(bwidth-1)*5+blockcol)=reshape(Vout,bwidth,L)';
+        
+        newVglobal=Vglobal;
+        newVglobal((blockrow-1)*L+1:(blockrow-1)*L+L,blockcol:5:(bwidth-1)*5+blockcol)=reshape(Vout,bwidth,L)';
         % result=networkvalidation(Vout);
+        [~,dist2]=distcal1(spimg,targetimg,(bdctimg+newVglobal).*bdctsign,T);
+        if dist2<norm(Cb)
+            Vglobal=newVglobal;
+            fprintf('current distance %g\n',dist2);
+        else
+            fprintf('new distance is worse than default, unchanged.\n');
+        end
     end
 end
 bdctimg=(bdctimg+Vglobal).*bdctsign;
 
 %objective function
-% function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode)
-% f1=0;
-% lengthnode=length(idxnode);
-% for m=1:lengthnode
-%     for n=1:lengthnode
-%         [x,i]=ind2sub([2*M+1 25*L],idxnode(m));
-%         [y,j]=ind2sub([2*M+1 25*L],idxnode(n));
-%         if i==j && x~=y
-%             f1=f1+V(m)*V(n);
-%         end
-%     end
-% end
-% f1=f1*A/2;
-% 
-% f2=B/2*(sum(V(:))-N)^2;
-% 
-% f3=repmat(V,[1 size(W,2)]).*W;
-% f3=sum(f3);
-% f3=sum((Cb-f3').^2);
-% f3=C/2*f3;
-% fall=f1+f2+f3;
+function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth)
+f1=0;
+lengthnode=length(idxnode);
+for m=1:lengthnode
+    for n=1:lengthnode
+        [x,i]=ind2sub([2*M+1 bwidth*L],idxnode(m));
+        [y,j]=ind2sub([2*M+1 bwidth*L],idxnode(n));
+        if i==j && x~=y
+            f1=f1+V(m)*V(n);
+        end
+    end
+end
+f1=f1*A/2;
+
+f2=B/2*(sum(V(:))-N)^2;
+
+f3=repmat(V,[1 size(W,2)]).*W;
+f3=sum(f3);
+f3=sum((Cb-f3').^2);
+f3=C/2*f3;
+fall=f1+f2+f3;
 
 %stack function: add newvalue into stack
 function stack=stafun(newvalue,stack)

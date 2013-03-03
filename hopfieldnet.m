@@ -95,8 +95,11 @@ for blockrow=1:RV
         I=N*B+C*W*Cb;
         
         %Calculate u00, U, V, and E
-        u00=u0*artanh(2*bwidth*L/lengthnode-1);
-        U=ones(lengthnode,1)*u00+(rand(lengthnode,1)*0.2-0.1)*u0;
+%         u00=u0*artanh(2*bwidth*L/lengthnode-1);
+%         U=ones(lengthnode,1)*u00+(rand(lengthnode,1)*0.2-0.1)*u0;
+        U=ones(2*M+1,bwidth*L)*(-1)*u0;
+        U(M+1,:)=u0;
+        U=U(vmask);
         V=nodeg(U,u0);
         E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
         fprintf('iter:0 E0=%g\n',E);

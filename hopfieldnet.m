@@ -1,13 +1,11 @@
-function bdctimg=hopfieldnet(spimg,targetimg,T)
+function [bdctimg]=hopfieldnet(spimg,targetimg,T)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %intput images are square and multiple of 8
-%todo: 1. change program so that it can process image wth different size
-%      2. record feature distance of every iteration
 
 %Initialization
 A=1500;
-B=400;
-C=200;
+B=600;
+C=60;
 u0=300;
 M=3;%maximum modification of coeff
 L=4;%Process L lines a time
@@ -31,9 +29,6 @@ tpmtarget=tpm1(bdcttarget,T,1);
 RV=MI/L;
 RH=5;%horizontal repitition if fixed
 
-[~,dist2]=distcal1(spimg,targetimg,(bdctimg+Vglobal).*bdctsign,T);
-fprintf('original distance %g\n\n',dist2);
-
 for blockrow=1:RV
     for blockcol=1:RH
         %decide related coefficients
@@ -44,6 +39,7 @@ for blockrow=1:RV
         end        
         
         %calculate Cb
+        %tpm=tpm1(abs((bdctimg+Vglobal).*bdctsign),T,1);
         tpm=tpm1(bdctimg+Vglobal,T,1);
         Cb=tpmtarget-tpm;
         Cb=Cb(:);
@@ -52,10 +48,12 @@ for blockrow=1:RV
         %initialize W        
         W=zeros(2*M+1,bwidth*L,(2*T+1)^2);
         vmask=true(2*M+1,bwidth*L);
+        dcnum=0;
         for row=1:L
             for col=1:bwidth
                 if mod((blockrow-1)*L+row,8)==1 && mod((col-1)*5+blockcol,8)==1
                     vmask(:,(row-1)*bwidth+col)=false;
+                    dcnum=dcnum+1;
                     continue;
                 end
                 for f=1:2*M+1
@@ -91,58 +89,120 @@ for blockrow=1:RV
         Tmat=Tmat+triu(Tmat,1)';
         
         %calculate I
-        N=bwidth*L;
+        N=bwidth*L-dcnum;
         I=N*B+C*W*Cb;
         
-        %Calculate u00, U, V, and E
-%         u00=u0*artanh(2*bwidth*L/lengthnode-1);
-%         U=ones(lengthnode,1)*u00+(rand(lengthnode,1)*0.2-0.1)*u0;
-        U=ones(2*M+1,bwidth*L)*(-1)*u0;
-        U(M+1,:)=u0;
-        U=U(vmask);
-        V=nodeg(U,u0);
-        E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-        fprintf('iter:0 E0=%g\n',E);
-        [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
-        fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
-        
-        %sequential update of nodes
-        iter=0;
-        while 1
-            iter=iter+1;
-            for m=1:lengthnode
-                U(m)=Tmat(m,:)*V(:)+I(m);
-                V(m)=nodeg(U(m),u0);
+        finish=false;
+        tries=0;
+        outoftry=false;
+        while ~finish
+            %Calculate u00, U, V, and E
+            u00=u0*artanh(2*bwidth*L/lengthnode-1);
+            U=ones(lengthnode,1)*u00+(rand(lengthnode,1)*0.2-0.1)*u0;
+            %         U=ones(2*M+1,bwidth*L)*(-1)*u0;
+            %         U(M+1,:)=u0;
+            %         U=U(vmask);
+            V=nodeg(U,u0);
+            E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
+            fprintf('iter:0 E0=%g\n',E);
+            %[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
+            %fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+            
+            %sequential update of nodes
+            iter=0;
+            while 1
+                iter=iter+1;
+                for m=1:lengthnode
+                    U(m)=Tmat(m,:)*V(:)+I(m);
+                    V(m)=nodeg(U(m),u0);
+                end
+                Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
+                fprintf('iter:%d  Enew=%g\n',iter,Enew);
+                %[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
+                %fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+                stack=stafun(abs((Enew-E)/E),stack);
+                %fprintf('length of stack %d\n',length(stack));
+                %fprintf('mean of stack %g\n\n',mean(stack));
+                if mean(stack)<tol
+                    Vtest=V;
+                    Vtest(Vtest>0.5)=1;
+                    Vtest(Vtest<=0.5)=0;
+                    [~,f1,f2,~]=objfun(A,B,C,Vtest,N,Cb,W,M,L,idxnode,bwidth);
+                    if f1==0 && f2==0
+                        break
+                    end
+                end
+                E=Enew;
+                if iter>30
+                    outoftry=true;
+                    break
+                end
             end
-            Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-            fprintf('iter:%d  Enew=%g\n',iter,Enew);
-            [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
-            fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
-            stack=stafun((Enew-E)/abs(E),stack);
-            %fprintf('length of stack %d\n',length(stack));
-            %fprintf('mean of stack %g\n\n',mean(stack));
-            if abs(mean(stack))<tol
-                break
+            
+            if outoftry
+                continue
             end
-            E=Enew;
-        end
-        
-        %validation of V
-        Vout=false(2*M+1,bwidth*L);
-        Sout=repmat((-M:M)',1,bwidth*L);
-        V=(V>0.5);
-        Vout(idxnode)=V;
-        Vout=sum(Vout.*Sout);
-        
-        newVglobal=Vglobal;
-        newVglobal((blockrow-1)*L+1:(blockrow-1)*L+L,blockcol:5:(bwidth-1)*5+blockcol)=reshape(Vout,bwidth,L)';
-        % result=networkvalidation(Vout);
-        [~,dist2]=distcal1(spimg,targetimg,(bdctimg+newVglobal).*bdctsign,T);
-        if dist2<norm(Cb)
-            Vglobal=newVglobal;
-            fprintf('current distance %g\n',dist2);
-        else
-            fprintf('new distance is worse than default, unchanged.\n');
+            
+            %validation of V
+            Vout=zeros(2*M+1,bwidth*L);
+            Sout=repmat((-M:M)',1,bwidth*L);
+            V(V>0.5)=1;
+            V(V<=0.5)=0;
+            Vout(idxnode)=V;
+            Vout=sum(Vout.*Sout);
+            
+            newVglobal=Vglobal;
+            newVglobal((blockrow-1)*L+1:(blockrow-1)*L+L,blockcol:5:(bwidth-1)*5+blockcol)=reshape(Vout,bwidth,L)';
+            newtpm=tpm1(bdctimg+newVglobal,T,1);
+            dist2=norm(newtpm(:)-tpmtarget(:));
+            if dist2<norm(Cb)
+                Vglobal=newVglobal;
+                fprintf('current distance %g\n',dist2);
+                finish=true;
+            else
+                if tries<1
+                    tries=tries+1;
+                    fprintf('new distance is worse than default, reinitialising.\n');
+                else
+                    %use greedy algorithm to find solution
+                    fprintf('using greedy algorithm\n');
+                    newVglobal=Vglobal;
+                    dist_old=norm(Cb);
+                    flags=-M:-1;
+                    flags=cat(2,flags,1:M);
+                    for row=1:L
+                        for col=1:bwidth
+                            if mod((blockrow-1)*L+row,8)==1 && mod((col-1)*5+blockcol,8)==1
+                                continue
+                            end
+                            newtpm=tpm1(bdctimg+newVglobal,T,1);
+                            flag=0;
+                            for f=flags
+                                if bdctimg((blockrow-1)*L+row,(col-1)*5+blockcol)+f<0
+                                    continue
+                                end
+                                D=tpmdiff(bdctimg+newVglobal,(blockrow-1)*L+row,(col-1)*5+blockcol,f,T);
+                                dist_new=norm(newtpm(:)+D(:)-tpmtarget(:));
+                                if dist_new<dist_old
+                                    flag=f;
+                                    dist_old=dist_new;
+                                end
+                            end
+                            if flag~=0
+                                newVglobal((blockrow-1)*L+row,(col-1)*5+blockcol)=flag;
+                            end
+                        end
+                    end
+                    if dist_old>=norm(Cb)
+                        fprintf('good solution not found by greedy algorithm.\n');
+                        finish=true;
+                    else
+                        Vglobal=newVglobal;
+                        fprintf('current distance is %g\n',dist_old);
+                        finish=true;
+                    end
+                end
+            end
         end
     end
 end
@@ -181,13 +241,7 @@ else
     stack(3)=newvalue;
 end
 
-%ileagle output evaluation
-% function result=networkvalidation(Vout)
-% result=isequal(ones(1,size(Vout,2)),sum(Vout));
-% if result==0
-%     fprintf('not permutation matrix\n');
-%     return
-% end
+
 
 
 

@@ -8,6 +8,8 @@ B=600;
 C=60;
 u0=300;
 M=3;%maximum modification of coeff
+flags=-M:-1;
+flags=cat(2,flags,1:M);
 L=4;%Process L lines a time
 
 stack=[];%used in calculation of average delta Energy function
@@ -56,14 +58,13 @@ for blockrow=1:RV
                     dcnum=dcnum+1;
                     continue;
                 end
-                for f=1:2*M+1
-                    flag=f-M-1;
-                    if bdctimg((blockrow-1)*L+row,(col-1)*5+blockcol)+flag<0
-                        vmask(f,(row-1)*bwidth+col)=false;
+                for f=flags
+                    if bdctimg((blockrow-1)*L+row,(col-1)*5+blockcol)+f<0
+                        vmask(f+M+1,(row-1)*bwidth+col)=false;
                         continue;
                     else
-                        D=tpmdiff(bdctimg+Vglobal,(blockrow-1)*L+row,(col-1)*5+blockcol,flag,T);
-                        W(f,(row-1)*bwidth+col,:)=reshape(D,1,1,(2*T+1)^2);
+                        D=tpmdiff(bdctimg+Vglobal,(blockrow-1)*L+row,(col-1)*5+blockcol,f,T);
+                        W(f+M+1,(row-1)*bwidth+col,:)=reshape(D,1,1,(2*T+1)^2);
                     end
                 end
             end
@@ -168,8 +169,7 @@ for blockrow=1:RV
                     fprintf('using greedy algorithm\n');
                     newVglobal=Vglobal;
                     dist_old=norm(Cb);
-                    flags=-M:-1;
-                    flags=cat(2,flags,1:M);
+                    
                     for row=1:L
                         for col=1:bwidth
                             if mod((blockrow-1)*L+row,8)==1 && mod((col-1)*5+blockcol,8)==1

@@ -5,7 +5,7 @@ function [bdctimg]=hopfieldnet(spimg,targetimg,T)
 %Initialization
 A=1500;
 B=600;
-C=60;
+C=40;
 u0=300;
 M=3;%maximum modification of coeff
 flags=-M:-1;

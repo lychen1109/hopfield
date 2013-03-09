@@ -14,7 +14,7 @@ for i=1:size(spimgs,1)
     targetimg=reshape(targetimg,M,M);
     bdctimg=hopfieldnet(spimg,targetimg,T);
     bdctimgs(i,:)=bdctimg(:)';
-    save(filename,bdctimgs);
+    save(filename,'bdctimgs');
     logfileid=fopen(logfilename,'a');
     fprintf(logfileid,'%s: finished processing image %d\n',strcat(int2str(c(2)),int2str(c(3)),int2str(c(4)),int2str(c(5))),i);
     fclose(logfileid);

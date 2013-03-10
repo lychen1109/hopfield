@@ -5,7 +5,7 @@ function [bdctimg]=hopfieldnet(spimg,targetimg,T)
 %Initialization
 A=1500;
 B=600;
-C=40;
+C=10;
 u0=300;
 M=3;%maximum modification of coeff
 flags=-M:-1;
@@ -129,8 +129,10 @@ for blockrow=1:RV
                     Vtest(Vtest>0.5)=1;
                     Vtest(Vtest<=0.5)=0;
                     [~,f1,f2,~]=objfun(A,B,C,Vtest,N,Cb,W,M,L,idxnode,bwidth);
-                    if f1==0 && f2==0
+                    if f1==0 && f2==0                   
                         break
+                    else
+                        fprintf('f1=%g, f2=%g',f1,f2);
                     end
                 end
                 E=Enew;

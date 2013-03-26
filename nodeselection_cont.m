@@ -1,5 +1,5 @@
-function selection=nodeselection(spimg,T)
-%Select nodes which can be processed together
+function selection=nodeselection_cont(spimg,T,num)
+%Select continous nodes with the num
 
 %transform to bdct domain
 bdctimg=blkproc(spimg,[8 8],@dct2);
@@ -13,14 +13,12 @@ dcmark=repmat(dcmark,[M/8 M/8]);
 bdctimg=bdctimg.*dcmark;
 
 selection=zeros(M,M);
-for i=1:M
-    j=1;
-    while j<=M
-        if bdctimg(i,j)>T
-            selection(i,j)=1;
-            j=j+5;
-        else
-            j=j+1;
-        end
-    end
+if num==0
+    selection(bdctimg>T)=1;
+    return
+else
+    points=find((bdctimg>T)',num);
+    selection(points)=1;
+    selection=selection';
 end
+

@@ -1,4 +1,4 @@
-function [bdctimg,V]=hopfieldnet_sel(spimg,targetimg,T,selection,opt)
+function [bdctimg]=hopfieldnet_sel(spimg,targetimg,T,selection,opt)
 %Hopfieldnet: calculate the best BDCT with hopfield network
 %intput images are square and multiple of 8
 %In this version, modify all the components in selection at once
@@ -13,7 +13,7 @@ A=opt.A;
 B=opt.B;
 C=opt.C;
 u0=opt.u0;
-M=3;%maximum modification of coeff
+M=1;%maximum modification of coeff
 flags=-M:-1;
 flags=cat(2,flags,1:M);
 
@@ -39,7 +39,6 @@ fprintf('current Cb %g\n',norm(Cb));
 W=zeros(2*M+1,numselection,(2*T+1)^2);
 for i=1:numselection
     for f=flags
-        
         D=tpmdiff(bdctimg,compx(i),compy(i),f,T);
         W(f+M+1,i,:)=reshape(D,1,1,(2*T+1)^2);
     end
@@ -48,21 +47,21 @@ end
 W=reshape(W,(2*M+1)*numselection,(2*T+1)^2);
 
 %initalization of Tmat
-network=ones(2*M+1,numselection);
+% network=ones(2*M+1,numselection);
 network_size=(2*M+1)*numselection;
-[nodex,nodey]=find(network);
-Tmat=zeros(network_size,network_size);
+% [nodex,nodey]=find(network);
+%Tmat=zeros(network_size,network_size);
 
-%Since this matrix is symmetrical, we only need to calculate half of the
-%elements
-for m=1:network_size
-    for n=m:network_size
-        
-        Tmat(m,n)=-A*delta(nodey(m),nodey(n))*(1-delta(nodex(m),nodex(n)))-B-C*W(m,:)*W(n,:)';
-    end
-end
-
-Tmat=Tmat+triu(Tmat,1)';
+T3=W*W';
+T3=sparse(T3);
+T11=[0 1 1;1 0 1;1 1 0];
+diagcell=cell(1);
+diagcell{1}=T11;
+diagcell=repmat(diagcell,numselection,1);
+T1=blkdiag(diagcell{:});
+T1=sparse(T1);
+Tmat=-B*ones(network_size,network_size);
+Tmat=-A*T1+Tmat-C*T3;
 
 %calculate I
 N=numselection;
@@ -84,7 +83,9 @@ fprintf('iter:0 E0=%g\n',E);
 iter=0;
 while 1
     iter=iter+1;
-    for m=1:network_size
+    idx=randperm(network_size);
+    for i=1:network_size
+        m=idx(i);
         U(m)=Tmat(m,:)*V(:)+I(m);
         V(m)=nodeg(U(m),u0);
     end
@@ -103,13 +104,17 @@ while 1
 end
 
 %validation of V
+V=reshape(V,2*M+1,numselection);
+Vcheck=sort(V,1,'descend');
+fprintf('mean of largest element of each column is %g\n',mean(Vcheck(1,:)));
+fprintf('mean of second largest element of each column is %g\n',mean(Vcheck(2,:)));
 V(V>0.5)=1;
 V(V<=0.5)=0;
-[~,f1,f2,~]=objfun(A,B,C,V,N,Cb,W,network_size,nodex,nodey);
-if f1~=0 || f2~=0
+
+if ~isequal(sum(V),ones(1,numselection))
     fprintf('Not permutation matrix\n');
 end
-V=reshape(V,2*M+1,numselection);
+
 Sout=repmat((-M:M)',1,numselection);
 Vout=sum(V.*Sout);
 Vglobal=zeros(size(selection));
@@ -124,24 +129,24 @@ end
 bdctimg=(bdctimg+Vglobal).*bdctsign;
 
 %objective function
-function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,network_size,nodex,nodey)
-f1=0;
-for m=1:network_size
-    for n=1:network_size
-        if nodey(m)==nodey(n) && nodex(m)~=nodex(n)
-            f1=f1+V(m)*V(n);
-        end
-    end
-end
-f1=f1*A/2;
-
-f2=B/2*(sum(V(:))-N)^2;
-
-f3=repmat(V,[1 size(W,2)]).*W;
-f3=sum(f3);
-f3=sum((Cb-f3').^2);
-f3=C/2*f3;
-fall=f1+f2+f3;
+% function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,network_size,nodex,nodey)
+% f1=0;
+% for m=1:network_size
+%     for n=1:network_size
+%         if nodey(m)==nodey(n) && nodex(m)~=nodex(n)
+%             f1=f1+V(m)*V(n);
+%         end
+%     end
+% end
+% f1=f1*A/2;
+% 
+% f2=B/2*(sum(V(:))-N)^2;
+% 
+% f3=repmat(V,[1 size(W,2)]).*W;
+% f3=sum(f3);
+% f3=sum((Cb-f3').^2);
+% f3=C/2*f3;
+% fall=f1+f2+f3;
 
 %stack function: add newvalue into stack
 % function stack=stafun(newvalue,stack)

@@ -75,7 +75,7 @@ U=ones(network_size,1)*u00+(rand(network_size,1)*0.2-0.1)*u0;
 %         U=U(vmask);
 V=nodeg(U,u0);
 E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
-fprintf('iter:0 E0=%g\n',E);
+fprintf('iter:0  E0=%g\n',E);
 %[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
 %fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
 

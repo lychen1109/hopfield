@@ -76,8 +76,8 @@ U=ones(network_size,1)*u00+(rand(network_size,1)*0.2-0.1)*u0;
 V=nodeg(U,u0);
 E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
 fprintf('iter:0  E0=%g\n',E);
-%[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
-%fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,T1);
+fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
 
 %sequential update of nodes
 iter=0;
@@ -91,8 +91,8 @@ while 1
     end
     Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
     fprintf('iter:%d  Enew=%g\n',iter,Enew);
-    %[fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,M,L,idxnode,bwidth);
-    %fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+    [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,T1);
+    fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
     %stack=stafun(abs((Enew-E)/E),stack);
     %fprintf('length of stack %d\n',length(stack));
     %fprintf('mean of stack %g\n\n',mean(stack));
@@ -112,6 +112,8 @@ V(V>0.5)=1;
 V(V<=0.5)=0;
 
 if ~isequal(sum(V),ones(1,numselection))
+    [fall,f1,f2,f3]=objfun(A,B,C,V(:),N,Cb,W,T1);
+    fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
     fprintf('Not permutation matrix\n');
 end
 
@@ -129,24 +131,20 @@ end
 bdctimg=(bdctimg+Vglobal).*bdctsign;
 
 %objective function
-% function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,network_size,nodex,nodey)
-% f1=0;
-% for m=1:network_size
-%     for n=1:network_size
-%         if nodey(m)==nodey(n) && nodex(m)~=nodex(n)
-%             f1=f1+V(m)*V(n);
-%         end
-%     end
-% end
-% f1=f1*A/2;
-% 
-% f2=B/2*(sum(V(:))-N)^2;
-% 
-% f3=repmat(V,[1 size(W,2)]).*W;
-% f3=sum(f3);
-% f3=sum((Cb-f3').^2);
-% f3=C/2*f3;
-% fall=f1+f2+f3;
+function [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,T1)
+crossmat=V*V';
+crossmat=crossmat.*T1;
+f1=sum(sum(crossmat));
+f1=full(f1);
+f1=f1*A/2;
+
+f2=B/2*(sum(V(:))-N)^2;
+
+f3=repmat(V,[1 size(W,2)]).*W;
+f3=sum(f3);
+f3=sum((Cb-f3').^2);
+f3=C/2*f3;
+fall=f1+f2+f3;
 
 %stack function: add newvalue into stack
 % function stack=stafun(newvalue,stack)

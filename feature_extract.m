@@ -1,8 +1,8 @@
 function feat=feature_extract(T)
 %load feature from color images
 
-root='C:\data\CASIA1\Au';
-files=dir([root filesep '*.jpg']);
+root='C:\data\uncompre\4cam_auth';
+files=dir([root filesep '*.tif']);
 N=length(files);
 feat=zeros(N,(2*T+1)^2);
 for i=1:N

@@ -1,7 +1,7 @@
-function feat=feature_extract(T)
+function feat=feature_extract(root,T)
 %load feature from color images
 
-root='C:\data\uncompre\4cam_auth';
+%root='C:\data\uncompre\4cam_auth';
 files=dir([root filesep '*.tif']);
 N=length(files);
 feat=zeros(N,(2*T+1)^2);

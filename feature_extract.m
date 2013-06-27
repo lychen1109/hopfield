@@ -13,7 +13,7 @@ for i=1:N
 %     bdctimg=abs(round(bdctimg));
 %     tm=tpm1(bdctimg,T,2);
 %     feat(:,:,i)=tm;
-    tm2=featextpartial(root,files(i).name,T);
+    tm2=featextbothpart(root,files(i).name,T);
     featp(:,:,i)=tm2;
 end
 

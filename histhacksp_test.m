@@ -14,6 +14,8 @@ tmtarget=tpm1(cbau,T,tpmopt);
 tmori=tpm1(cbsp,T,tpmopt);
 fprintf('Original distance between features %g\n',norm(tmori(:)-tmtarget(:)));
 
-cbnew=histhacksp(cbsp,cbau,4,T,[]);
+K=4;
+selection=nodeselectionsp(cbsp,K,1);
+cbnew=histhacksp(cbsp,cbau,K,T,selection);
 tm=tpm1(cbnew,T,tpmopt);
 fprintf('Final distance between features %g\n',norm(tm(:)-tmtarget(:)));

@@ -6,6 +6,7 @@ N=length(filelist);
 feat=zeros(2*T+1,2*T+1,N);
 for i=1:N
     rgbimg=imread([root filesep filelist{i}]);
+    rgbimg=im2uint8(rgbimg);
     ycbcr=rgb2ycbcr(rgbimg);
     cb=double(ycbcr(:,:,2));
     %cr=double(ycbcr(:,:,3));

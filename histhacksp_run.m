@@ -9,9 +9,9 @@ parfor i=1:N
    img=double(cbsp{i});
    selection=nodeselectionsp(img,K,shift);
    tic;
-   [img]=histhacksp(img,imtarget,K,T,selection);
+   [img,distori,dist]=histhacksp(img,imtarget,K,T,selection);
    tt=toc;
-   fprintf('No. %d image processed in %g sec\n',i,tt);
+   fprintf('No. %d image processed in %g sec, %g -> %g\n',i,tt,distori,dist);
    cbspmod{i}=uint8(img);
 end
 

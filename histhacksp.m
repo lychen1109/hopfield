@@ -1,4 +1,4 @@
-function [img,tm]=histhacksp(img,imgtarget,K,T,selection)
+function [img,distori,dist]=histhacksp(img,imgtarget,K,T,selection)
 %change only on spatial domain
 %K: dymamic range of coefficients
 %T: threshold of co-occurrence matrix
@@ -9,6 +9,7 @@ tpmopt=1;
 %create target matrix
 tmtarget=tpm1(imgtarget,T,tpmopt);
 tm=tpm1(img,T,tpmopt);
+distori=sampledist(tm(:),tmtarget(:));
 
 if isempty(selection)
     selection=ones(size(img));
@@ -29,6 +30,8 @@ for i=1:pointsize
     img(SJ(nodeidx),SK(nodeidx))=img(SJ(nodeidx),SK(nodeidx))+output.flag;
     tm=output.tm;
 end
+
+dist=sampledist(tm(:),tmtarget(:));
 
 function output=flaggen(img,tmtarget,sj,sk,tm,T,K)
 %calculate the best flag for current pixel

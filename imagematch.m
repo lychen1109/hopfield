@@ -45,8 +45,8 @@ while 1
     end
     Enew=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
     fprintf('iter:%d  Enew=%g\n',iter,Enew);
-%     [fall,f1,f2,f3]=objfun(A,B,C,V,N,Cb,W,T1);
-%     fprintf('fall=%g, f1=%g, f2=%g, f3=%g\n',fall,f1,f2,f3);
+    [f1,f2,f3,f4]=objfun(A,B,C,D,V,N,dismat,T1,T2);
+    fprintf('f1=%g, f2=%g, f3=%g, f4=%g\n',f1,f2,f3,f4);
     if Enew>=E
         break;
     else
@@ -60,6 +60,16 @@ V(V<=0.5)=0;
 if ~isequal(sum(V),ones(1,90))
     fprintf('Not permutation matrix\n');
 end
+
+function [f1,f2,f3,f4]=objfun(A,B,C,D,V,N,dismat,T1,T2)
+crossmat=V*V';
+f1=A/2*sum(sum(crossmat.*T1));
+f2=B/2*sum(sum(crossmat.*T2));
+f3=C/2*(sum(V(:))-N)^2;
+f4=D/2*sum(V(:).*dismat(:))^2;
+
+
+
 
 
 

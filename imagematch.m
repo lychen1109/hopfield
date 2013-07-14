@@ -8,6 +8,7 @@ B=opt.B;
 C=opt.C;
 D=opt.D;
 u0=opt.u0;
+Tol=1e-5;
 
 %calculate Tmat and I
 T11=ones(90,90);
@@ -47,7 +48,8 @@ while 1
     fprintf('iter:%d  Enew=%g\n',iter,Enew);
     [f1,f2,f3,f4]=objfun(A,B,C,D,V,N,dismat,T1,T2);
     fprintf('f1=%g, f2=%g, f3=%g, f4=%g\n',f1,f2,f3,f4);
-    if Enew>=E
+    delta=abs((Enew-E)/E);
+    if delta<Tol
         break;
     else
         E=Enew;

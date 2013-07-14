@@ -35,7 +35,7 @@ V=nodeg(U,u0);
 E=-0.5*V(:)'*Tmat*V(:)-V(:)'*I(:);
 fprintf('iter:0  E0=%g\n',E);
 [f1,f2,f3,f4]=objfun(A,B,C,D,V,N,dismat,T1,T2);
-fprintf('f1=%g, f2=%g, f3=%g, f4=%g, f=%g\n',f1,f2,f3,f4,f1+f2+f3+f4);
+fprintf('f1=%g, f2=%g, f3=%g, f4=%g, f=%g\n\n',f1,f2,f3,f4,f1+f2+f3+f4);
 
 iter=0;
 while 1
@@ -50,7 +50,7 @@ while 1
     fprintf('iter:%d  Enew=%g\n',iter,Enew);
     [f1,f2,f3,f4]=objfun(A,B,C,D,V,N,dismat,T1,T2);
     fprintf('f1=%g, f2=%g, f3=%g, f4=%g, f=%g\n',f1,f2,f3,f4,f1+f2+f3+f4);
-    delta=(Enew-E)/E;
+    delta=(Enew-E)/abs(E);
     fprintf('delta E=%g\n\n',delta);
     if abs(delta)<Tol
         break;
